@@ -96,7 +96,7 @@ public class UsuarioTest {
                 .when()
                 .delete("usuarios/" + usuarioId)  // Usa o ID armazenado
                 .then()
-                .statusCode(HttpStatus.SC_OK) // Espera o status "204 No Content"
+                .statusCode(HttpStatus.SC_OK)
                 .log().all();
     }
 }
