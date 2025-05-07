@@ -88,6 +88,7 @@ public class UsuarioTest {
                 .statusCode(HttpStatus.SC_OK) // Espera o status "200 OK"
                 .log().all();
     }
+
     @Test
     @Order(5)  // Define que este teste será executado em quarto lugar
     public void apagarUsuario() {
