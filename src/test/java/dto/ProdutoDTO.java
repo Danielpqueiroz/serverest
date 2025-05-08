@@ -2,25 +2,25 @@ package dto;
 
 public class ProdutoDTO {
     private String nome;
-    private Double preco;
+    private Integer preco;
     private String descricao;
     private Integer quantidade;
 
     public ProdutoDTO() {
     }
 
-    public ProdutoDTO(String nome, Double preco, String descricao, Integer quantidade) {
+    public ProdutoDTO(String nome, Integer preco, String descricao, Integer quantidade) {
         this.nome = nome;
         this.preco = preco;
         this.descricao = descricao;
         this.quantidade = quantidade;
     }
 
-    public Double getPreco() {
+    public Integer getPreco() {
         return preco;
     }
 
-    public void setPreco(Double preco) {
+    public void setPreco(Integer preco) {
         this.preco = preco;
     }
 

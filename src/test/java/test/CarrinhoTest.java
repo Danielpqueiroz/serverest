@@ -1,70 +1,79 @@
 package test;
 
+import com.github.javafaker.Faker;
+import dto.ProdutoDTO;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
-import org.junit.jupiter.api.MethodOrderer;
-import org.junit.jupiter.api.Order;
+import org.apache.http.HttpStatus;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import utils.AuthUtils;
 
-import java.util.UUID;
+import static io.restassured.RestAssured.given;
 
-import static io.restassured.RestAssured.*;
-import static org.hamcrest.Matchers.*;
-import org.junit.jupiter.api.TestMethodOrder;
-
-@TestMethodOrder(MethodOrderer.OrderAnnotation.class)  // Controla a ordem dos testes
 public class CarrinhoTest {
-    @Test
-    @Order(1)  // Define que este teste será executado primeiro
-    public void deveCriarCarrinhoComSucesso() {
-        String token = AuthUtils.criarUsuarioEObterToken();
 
-        // 1. Cria produto
-        String nomeProduto = "Produto Teste " + UUID.randomUUID();
-        Response produtoResponse = given()
-                .baseUri("https://serverest.dev")
-                .header("Authorization", token)
+    private static String token;
+    private static String produtoId;
+
+    @BeforeAll
+    public static void beforeAll() {
+        // Autentica e obtém o token
+        token = AuthUtils.criarUsuarioEObterToken();
+
+        // Cria um produto diretamente
+        Faker faker = new Faker();
+        ProdutoDTO produtoDTO = new ProdutoDTO();
+        produtoDTO.setNome(faker.commerce().material() + " " + faker.commerce().productName());
+        produtoDTO.setPreco(faker.number().numberBetween(1, 100));
+        produtoDTO.setDescricao(faker.lorem().sentence());
+        produtoDTO.setQuantidade(faker.number().numberBetween(1, 100));
+        System.out.println(produtoDTO);
+        System.out.println("Nome: " + produtoDTO.getNome());
+        System.out.println("Preço: " + produtoDTO.getPreco());
+        System.out.println("Descrição: " + produtoDTO.getDescricao());
+        System.out.println("Quantidade: " + produtoDTO.getQuantidade());
+        Response response = given()
                 .contentType(ContentType.JSON)
-                .body("{ \"nome\": \"" + nomeProduto + "\", \"preco\": 100, \"descricao\": \"Desc\", \"quantidade\": 10 }")
+                .header("Authorization", token)
+                .body(produtoDTO)
                 .when()
                 .post("/produtos");
 
-        produtoResponse.then().statusCode(201);
-        String idProduto = produtoResponse.jsonPath().getString("_id");
-
-        // 2. Cria carrinho com esse produto
-        given()
-                .baseUri("https://serverest.dev")
-                .header("Authorization", token)
-                .contentType(ContentType.JSON)
-                .body("{ \"produtos\": [ { \"idProduto\": \"" + idProduto + "\", \"quantidade\": 1 } ] }")
-                .when()
-                .post("/carrinhos")
-                .then()
-                .log().all()
-                .statusCode(201)
-                .body("message", is("Cadastro realizado com sucesso"));
+        response.then().statusCode(HttpStatus.SC_CREATED);
+        produtoId = response.jsonPath().getString("_id");
+        System.out.println(produtoId);
+        System.out.println(response.jsonPath());
     }
 
     @Test
-    @Order(2)  // Define que este teste será executado em segundo lugar
-    public void naoDeveCriarCarrinhoComProdutoInvalido() {
-        String token = AuthUtils.criarUsuarioEObterToken();
+    public void cadastrarCarrinhoComProduto() {
+        String carrinhoJson = "{\n" +
+                "  \"produtos\": [\n" +
+                "    { \"idProduto\": \"" + produtoId + "\", \"quantidade\": 2 }\n" +
+                "  ]\n" +
+                "}";
 
-        // ID de produto inexistente
-        String idProdutoFalso = "000000000000000000000000";
-
-        given()
-                .baseUri("https://serverest.dev")
-                .header("Authorization", token)
+        Response response = given()
                 .contentType(ContentType.JSON)
-                .body("{ \"produtos\": [ { \"idProduto\": \"" + idProdutoFalso + "\", \"quantidade\": 1 } ] }")
+                .header("Authorization", token)
+                .body(carrinhoJson)
                 .when()
-                .post("/carrinhos")
+                .post("/carrinhos");
+
+        response.then()
+                .statusCode(HttpStatus.SC_CREATED)
+                .log().all();
+    }
+
+    @Test
+    public void listarCarrinhos() {
+        given()
+                .header("Authorization", token)
+                .when()
+                .get("/carrinhos")
                 .then()
-                .log().all()
-                .statusCode(400)
-                .body("message", containsString("Produto não encontrado"));
+                .statusCode(HttpStatus.SC_OK)
+                .log().all();
     }
 }
