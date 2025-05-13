@@ -5,6 +5,7 @@ import dto.UsuarioDTO;
 import io.restassured.http.ContentType;
 import org.apache.http.HttpStatus;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.AfterAll;  // Importando @AfterAll
 import org.junit.jupiter.api.Test;
 
 import static io.restassured.RestAssured.baseURI;
@@ -91,5 +92,17 @@ public class LoginTest {
                 .statusCode(HttpStatus.SC_BAD_REQUEST)  // Espera um status 400 Bad Request
                 .log().all();
     }
-}
 
+    // Método @AfterAll, executado uma vez após todos os testes
+    @AfterAll
+    public static void afterAll() {
+        // Deletar o usuário criado após os testes
+        given()
+                .contentType(ContentType.JSON)
+                .when()
+                .delete("usuarios/" + usuarioId)  // Endpoint para deletar o usuário com o ID específico
+                .then()
+                .statusCode(HttpStatus.SC_OK);  // Espera um status 204 No Content para deletar com sucesso
+        System.out.println("Usuário com ID " + usuarioId + " deletado com sucesso.");
+    }
+}

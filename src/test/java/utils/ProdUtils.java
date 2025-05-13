@@ -4,45 +4,37 @@ import com.github.javafaker.Faker;
 import dto.ProdutoDTO;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
-import org.junit.jupiter.api.BeforeAll;
+import org.apache.http.HttpStatus;
 
-
-import static io.restassured.RestAssured.*;
+import static io.restassured.RestAssured.given;
 
 public class ProdUtils {
-    private static String token;
-    @BeforeAll
-    public static void beforeAll() {
-        // Obter o token de autenticação com o método de AuthUtils
-        token = AuthUtils.criarUsuarioEObterToken();
 
-
-    }
-    // Método para criar um único produto e retornar seu ID
-    public static String criarProduto() {
-
-        Faker faker = new Faker(); // Criando uma instância do Faker
-        // Produto
+    // Função para criar um produto e retornar o ID do produto criado
+    public static String criarProduto(String token) {
+        // Usando o Faker para gerar dados aleatórios do produto
+        Faker faker = new Faker();
         ProdutoDTO produtoDTO = new ProdutoDTO();
-        produtoDTO.setNome(faker.commerce().productName()); // Nome aleatório do produto
-        produtoDTO.setPreco(faker.number().numberBetween(1, 100));  // Preço aleatório do produto
-        produtoDTO.setDescricao(faker.lorem().sentence());  // Descrição aleatória do produto
-        produtoDTO.setQuantidade(faker.number().numberBetween(1, 100));  // Quantidade aleatória
+        produtoDTO.setNome(faker.commerce().material() + " " + faker.commerce().productName());
+        produtoDTO.setPreco(faker.number().numberBetween(1, 100));
+        produtoDTO.setDescricao(faker.lorem().sentence());
+        produtoDTO.setQuantidade(faker.number().numberBetween(1, 100));
 
-        // Cadastrando o Produto
+
+        // Cadastrando o produto
         Response response = given()
                 .contentType(ContentType.JSON)
-                .header("Authorization", token)
-                .body(produtoDTO)
+                .header("Authorization", token)  // Passando o token corretamente
+                .body(produtoDTO)  // Envia os dados do produto
                 .when()
                 .post("/produtos");
 
-        // Verificando se o Produto foi criado com sucesso
-        response.then().statusCode(201);
+        // Verificando se o produto foi criado com sucesso (status 201)
+        response.then().log().all();
+        response.then().statusCode(HttpStatus.SC_CREATED);
 
-        // Obtendo e retornando o ID do produto
-        String produtoId = response.jsonPath().getString("_id");
-        System.out.println("ID do Produto: " + produtoId);
-        return produtoId;
+        System.out.println(response.jsonPath());
+        // Retorna o ID do produto criado
+        return response.jsonPath().getString("_id");
     }
 }

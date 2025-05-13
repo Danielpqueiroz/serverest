@@ -26,7 +26,7 @@ public class AuthUtils {
         UsuarioDTO usuarioDTO = new UsuarioDTO();
         Faker faker = new Faker();
 
-        usuarioDTO.setAdministrador(faker.bool().bool() ? "true" : "false");
+        usuarioDTO.setAdministrador("true");
         usuarioDTO.setNome(faker.name().fullName());
         usuarioDTO.setEmail(faker.internet().emailAddress());  // Usando o email gerado
         usuarioDTO.setPassword(faker.internet().password(8, 12));  // Senha fixa para o usuário
