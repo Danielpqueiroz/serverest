@@ -49,23 +49,6 @@ public class ProdutoTest {
 
     @Test
     @Order(2)
-    public void cadastrarProdutoSemToken() {
-        ProdutoDTO produtoDTO = criarProdutoDTO();
-
-        given()
-                .baseUri("https://serverest.dev")
-                .contentType(ContentType.JSON)
-                .body(produtoDTO)
-                .when()
-                .post("produtos")
-                .then()
-                .log().all()
-                .statusCode(HttpStatus.SC_UNAUTHORIZED)
-                .body("message", is("Token de acesso ausente, inválido, expirado ou usuário do token não existe mais"));
-    }
-
-    @Test
-    @Order(3)
     public void buscarTodosProdutos() {
         given()
                 .baseUri("https://serverest.dev")
@@ -79,7 +62,7 @@ public class ProdutoTest {
     }
 
     @Test
-    @Order(4)
+    @Order(3)
     public void buscarProdutoPorId() {
         given()
                 .baseUri("https://serverest.dev")
@@ -93,7 +76,7 @@ public class ProdutoTest {
     }
 
     @Test
-    @Order(5)
+    @Order(4)
     public void atualizarProduto() {
         ProdutoDTO produtoAtualizado = criarProdutoDTO();
 
@@ -111,7 +94,7 @@ public class ProdutoTest {
     }
 
     @Test
-    @Order(6)
+    @Order(5)
     public void apagarProduto() {
         given()
                 .baseUri("https://serverest.dev")
@@ -134,6 +117,23 @@ public class ProdutoTest {
         produtoDTO.setQuantidade(faker.number().numberBetween(1, 100));
 
         return produtoDTO;
+    }
+
+    @Test
+    @Order(6)
+    public void cadastrarProdutoSemToken() {
+        ProdutoDTO produtoDTO = criarProdutoDTO();
+
+        given()
+                .baseUri("https://serverest.dev")
+                .contentType(ContentType.JSON)
+                .body(produtoDTO)
+                .when()
+                .post("produtos")
+                .then()
+                .log().all()
+                .statusCode(HttpStatus.SC_UNAUTHORIZED)
+                .body("message", is("Token de acesso ausente, inválido, expirado ou usuário do token não existe mais"));
     }
 
     @AfterAll

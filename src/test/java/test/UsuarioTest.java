@@ -2,19 +2,17 @@ import com.github.javafaker.Faker;
 import dto.UsuarioDTO;
 import io.restassured.http.ContentType;
 import org.apache.http.HttpStatus;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Order;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestMethodOrder;
-import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
+import org.junit.jupiter.api.*;
 
 import static io.restassured.RestAssured.baseURI;
 import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.containsString;
 
-@TestMethodOrder(OrderAnnotation.class)
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class UsuarioTest {
 
     private static String usuarioId;
+    private static String emailUsado;
     private static Faker faker;
 
     @BeforeAll
@@ -27,6 +25,8 @@ public class UsuarioTest {
     @Order(1)
     public void cadastroUsuario() {
         UsuarioDTO usuarioDTO = criarUsuarioDTO("true");
+
+        emailUsado = usuarioDTO.getEmail(); // Salva o email criado para usar depois
 
         usuarioId = given()
                 .contentType(ContentType.JSON)
@@ -43,6 +43,24 @@ public class UsuarioTest {
 
     @Test
     @Order(2)
+    public void cadastroUsuarioComEmailExistente() {
+        UsuarioDTO usuarioDTO = criarUsuarioDTO("false");
+        usuarioDTO.setEmail(emailUsado); // Usa o email que já foi cadastrado
+
+        given()
+                .contentType(ContentType.JSON)
+                .body(usuarioDTO)
+                .when()
+                .post("usuarios")
+                .then()
+                .statusCode(HttpStatus.SC_BAD_REQUEST)
+                .body("message", containsString("Este email já está sendo usado")); // Ajuste a mensagem conforme a API
+    }
+
+    // ... os demais testes permanecem iguais ...
+
+    @Test
+    @Order(3)
     public void listarUsuarios() {
         given()
                 .contentType(ContentType.JSON)
@@ -54,7 +72,7 @@ public class UsuarioTest {
     }
 
     @Test
-    @Order(3)
+    @Order(4)
     public void listarUsuarioPorId() {
         given()
                 .contentType(ContentType.JSON)
@@ -66,7 +84,7 @@ public class UsuarioTest {
     }
 
     @Test
-    @Order(4)
+    @Order(5)
     public void atualizarUsuario() {
         UsuarioDTO usuarioDTO = criarUsuarioDTO("false");
 
@@ -81,7 +99,7 @@ public class UsuarioTest {
     }
 
     @Test
-    @Order(5)
+    @Order(6)
     public void apagarUsuario() {
         given()
                 .contentType(ContentType.JSON)
@@ -97,7 +115,7 @@ public class UsuarioTest {
         usuarioDTO.setAdministrador(administrador);
         usuarioDTO.setNome(faker.name().fullName());
         usuarioDTO.setEmail(faker.internet().emailAddress());
-        usuarioDTO.setPassword("123");  // Pode alterar para faker.internet().password() se quiser senha aleatória
+        usuarioDTO.setPassword("123");
         return usuarioDTO;
     }
 }

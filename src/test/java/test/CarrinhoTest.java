@@ -1,75 +1,71 @@
 package test;
 
+import com.github.javafaker.Faker;
 import dto.ProdutoDTO;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 import org.apache.http.HttpStatus;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestMethodOrder;
-import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.*;
 import utils.AuthUtils;
 import utils.ProdUtils;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
 import static io.restassured.RestAssured.given;
 
-@TestMethodOrder(org.junit.jupiter.api.MethodOrderer.OrderAnnotation.class)  // Garante a execução na ordem correta
+@TestMethodOrder(org.junit.jupiter.api.MethodOrderer.OrderAnnotation.class)
 public class CarrinhoTest {
 
     private static String token;
-    private static String usuarioId;  // ID do usuário criado
+    private static String usuarioId;
     private static String produtoId;
     private static String carrinhoId;
 
     @BeforeAll
     public static void beforeAll() {
-        // Autentica e obtém o token
         token = AuthUtils.criarUsuarioEObterToken();
 
-        // Usando o ProdUtils para criar o produto e obter o ID do produto
-        produtoId = ProdUtils.criarProduto(token);  // Passa o token para o ProdUtils
-        System.out.println("Produto Criado: ID = " + produtoId);
+        // Criar produto usando utilitário que retorna o ID
+        produtoId = ProdUtils.criarProduto(token);
+        System.out.println("Produto criado: ID = " + produtoId);
     }
+
 
     @Test
     @Order(1)
     public void cadastrarCarrinhoComProduto() {
-        String carrinhoJson = "{\n" +
-                "  \"produtos\": [\n" +
-                "    { \"idProduto\": \"" + produtoId + "\", \"quantidade\": 2 }\n" +
-                "  ]\n" +
-                "}";
+        Map<String, Object> produtoItem = new HashMap<>();
+        produtoItem.put("idProduto", produtoId);
+        produtoItem.put("quantidade", 2);
 
-        // Cadastrando o carrinho
+        Map<String, Object> carrinhoBody = new HashMap<>();
+        carrinhoBody.put("produtos", Collections.singletonList(produtoItem));
+
         Response response = given()
                 .contentType(ContentType.JSON)
                 .header("Authorization", token)
-                .body(carrinhoJson)
+                .body(carrinhoBody)
                 .when()
                 .post("/carrinhos");
 
-        // Verificando se o Carrinho foi criado com sucesso
         response.then()
                 .statusCode(HttpStatus.SC_CREATED)
                 .log().all();
 
-        // Armazenando o ID do carrinho para ser usado nos testes seguintes
         carrinhoId = response.jsonPath().getString("_id");
-        System.out.println("Carrinho Criado: ID = " + carrinhoId);
+        System.out.println("Carrinho criado: ID = " + carrinhoId);
     }
 
     @Test
     @Order(2)
     public void buscarCarrinhoPeloId() {
-        // Buscando o carrinho pelo ID
-        Response response = given()
+        given()
                 .header("Authorization", token)
                 .when()
-                .get("/carrinhos/" + carrinhoId);
-
-        // Validando a resposta da busca pelo carrinho
-        response.then()
+                .get("/carrinhos/{id}", carrinhoId)
+                .then()
                 .statusCode(HttpStatus.SC_OK)
                 .log().all();
     }
@@ -77,7 +73,6 @@ public class CarrinhoTest {
     @Test
     @Order(3)
     public void listarCarrinhos() {
-        // Buscando todos os carrinhos
         given()
                 .header("Authorization", token)
                 .when()
@@ -90,17 +85,53 @@ public class CarrinhoTest {
     @Test
     @Order(4)
     public void apagarCarrinho() {
-        // Apagando o carrinho criado
-        Response response = given()
+        // Supondo que a API apaga carrinho pela ID
+        given()
                 .header("Authorization", token)
                 .when()
-                .delete("/carrinhos/concluir-compra");
-
-        // Verificando se o carrinho foi apagado com sucesso
-        response.then()
-                .statusCode(HttpStatus.SC_OK)  // Espera o status 204 No Content
+                .delete("/carrinhos/concluir-compra")
+                .then()
+                .statusCode(HttpStatus.SC_OK)
                 .log().all();
     }
+
+    @Test
+    @Order(5)
+    public void cancelarCompraCarrinho() {
+        // Gerar novo token (novo usuário)
+        String novoToken = AuthUtils.criarUsuarioEObterToken();
+
+        // Criar um produto novo para o carrinho
+        String novoProdutoId = ProdUtils.criarProduto(novoToken);
+
+        // Montar corpo do carrinho com o produto
+        Map<String, Object> produtoItem = new HashMap<>();
+        produtoItem.put("idProduto", novoProdutoId);
+        produtoItem.put("quantidade", 1);
+
+        Map<String, Object> carrinhoBody = new HashMap<>();
+        carrinhoBody.put("produtos", Collections.singletonList(produtoItem));
+
+        // Criar o carrinho para o usuário
+        given()
+                .contentType(ContentType.JSON)
+                .header("Authorization", novoToken)
+                .body(carrinhoBody)
+                .when()
+                .post("/carrinhos")
+                .then()
+                .statusCode(HttpStatus.SC_CREATED);
+
+        // Agora cancelar a compra (não passa ID, só token)
+        given()
+                .header("Authorization", novoToken)
+                .when()
+                .delete("/carrinhos/cancelar-compra")
+                .then()
+                .statusCode(HttpStatus.SC_OK)
+                .log().all();
+    }
+
     @AfterAll
     public static void afterAll() {
         // Deletando o usuário criado após todos os testes
