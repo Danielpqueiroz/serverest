@@ -11,93 +11,93 @@ import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
 import static io.restassured.RestAssured.baseURI;
 import static io.restassured.RestAssured.given;
 
-@TestMethodOrder(OrderAnnotation.class)  // Controla a ordem dos testes
+@TestMethodOrder(OrderAnnotation.class)
 public class UsuarioTest {
 
-    private static String usuarioId;  // Variável para armazenar o ID do usuário
+    private static String usuarioId;
+    private static Faker faker;
 
     @BeforeAll
     public static void beforeAll() {
-        baseURI = "https://serverest.dev/"; // URL base
+        baseURI = "https://serverest.dev/";
+        faker = new Faker();
     }
 
     @Test
-    @Order(1)  // Define que este teste será executado primeiro
+    @Order(1)
     public void cadastroUsuario() {
-        UsuarioDTO usuarioDTO = new UsuarioDTO();
-        Faker faker = new Faker();
+        UsuarioDTO usuarioDTO = criarUsuarioDTO("true");
 
-        usuarioDTO.setAdministrador("true");
-        usuarioDTO.setNome(faker.name().fullName());
-        usuarioDTO.setEmail(faker.internet().emailAddress());
-        usuarioDTO.setPassword("123");
-
-        // Cadastro do usuário
         usuarioId = given()
                 .contentType(ContentType.JSON)
                 .body(usuarioDTO)
-                .when().post("usuarios")
+                .when()
+                .post("usuarios")
                 .then()
-                .statusCode(HttpStatus.SC_CREATED)  // Espera um status 201 Created
+                .statusCode(HttpStatus.SC_CREATED)
                 .extract()
-                .path("_id");  // Extrai o campo _id da resposta
-        System.out.println("ID do usuário criado: " + usuarioId);  // Exibe o ID gerado para referência
+                .path("_id");
+
+        System.out.println("ID do usuário criado: " + usuarioId);
     }
 
     @Test
-    @Order(2)  // Define que este teste será executado em segundo lugar
+    @Order(2)
     public void listarUsuarios() {
         given()
                 .contentType(ContentType.JSON)
                 .when()
                 .get("usuarios")
                 .then()
-                .statusCode(HttpStatus.SC_OK) // Espera o status de sucesso
+                .statusCode(HttpStatus.SC_OK)
                 .log().all();
     }
 
     @Test
-    @Order(3)  // Define que este teste será executado em terceiro lugar
+    @Order(3)
     public void listarUsuarioPorId() {
         given()
                 .contentType(ContentType.JSON)
                 .when()
-                .get("usuarios/" + usuarioId)  // Usa o ID armazenado
+                .get("usuarios/{id}", usuarioId)
                 .then()
-                .statusCode(HttpStatus.SC_OK) // Espera o status de sucesso
+                .statusCode(HttpStatus.SC_OK)
                 .log().all();
     }
 
     @Test
-    @Order(4)  // Define que este teste será executado por último
+    @Order(4)
     public void atualizarUsuario() {
-        UsuarioDTO usuarioDTO = new UsuarioDTO();
-        Faker faker = new Faker();
-
-        usuarioDTO.setAdministrador("false");
-        usuarioDTO.setNome(faker.name().fullName());
-        usuarioDTO.setEmail(faker.internet().emailAddress());
-        usuarioDTO.setPassword(faker.internet().password());
+        UsuarioDTO usuarioDTO = criarUsuarioDTO("false");
 
         given()
                 .contentType(ContentType.JSON)
                 .body(usuarioDTO)
                 .when()
-                .put("usuarios/" + usuarioId)  // Usa o ID armazenado
+                .put("usuarios/{id}", usuarioId)
                 .then()
-                .statusCode(HttpStatus.SC_OK) // Espera o status "200 OK"
+                .statusCode(HttpStatus.SC_OK)
                 .log().all();
     }
 
     @Test
-    @Order(5)  // Define que este teste será executado em quarto lugar
+    @Order(5)
     public void apagarUsuario() {
         given()
                 .contentType(ContentType.JSON)
                 .when()
-                .delete("usuarios/" + usuarioId)  // Usa o ID armazenado
+                .delete("usuarios/{id}", usuarioId)
                 .then()
                 .statusCode(HttpStatus.SC_OK)
                 .log().all();
+    }
+
+    private UsuarioDTO criarUsuarioDTO(String administrador) {
+        UsuarioDTO usuarioDTO = new UsuarioDTO();
+        usuarioDTO.setAdministrador(administrador);
+        usuarioDTO.setNome(faker.name().fullName());
+        usuarioDTO.setEmail(faker.internet().emailAddress());
+        usuarioDTO.setPassword("123");  // Pode alterar para faker.internet().password() se quiser senha aleatória
+        return usuarioDTO;
     }
 }

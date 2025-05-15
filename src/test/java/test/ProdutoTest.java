@@ -3,6 +3,7 @@ package test;
 import dto.ProdutoDTO;
 import com.github.javafaker.Faker;
 import io.restassured.http.ContentType;
+import io.restassured.response.Response;
 import org.apache.http.HttpStatus;
 import org.junit.jupiter.api.*;
 
@@ -13,25 +14,23 @@ import utils.AuthUtils;
 
 import java.util.UUID;
 
-@TestMethodOrder(MethodOrderer.OrderAnnotation.class)  // Controla a ordem dos testes
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class ProdutoTest {
 
-    private static String produtoId;  // Variável para armazenar o ID do produto
+    private static String usuarioId;
+    private static String produtoId;
+    private static String token;
+
+    @BeforeAll
+    public static void setup() {
+        token = AuthUtils.criarUsuarioEObterToken();
+    }
 
     @Test
-    @Order(1)  // Define que este teste será executado primeiro
+    @Order(1)
     public void cadastrarProduto() {
-        String token = AuthUtils.criarUsuarioEObterToken();
+        ProdutoDTO produtoDTO = criarProdutoDTO();
 
-        ProdutoDTO produtoDTO = new ProdutoDTO();
-        Faker faker = new Faker();
-
-        produtoDTO.setNome("Notebook Lenovo " + UUID.randomUUID());
-        produtoDTO.setPreco(faker.number().numberBetween(0, 3500));
-        produtoDTO.setDescricao(faker.book().title());
-        produtoDTO.setQuantidade(faker.number().numberBetween(1, 100));
-
-        // Cadastro do Produto
         produtoId = given()
                 .baseUri("https://serverest.dev")
                 .header("Authorization", token)
@@ -41,25 +40,19 @@ public class ProdutoTest {
                 .post("produtos")
                 .then()
                 .log().all()
-                .statusCode(HttpStatus.SC_CREATED) // Espera um status 201 Created
+                .statusCode(HttpStatus.SC_CREATED)
                 .extract()
-                .path("_id"); // Extrai o campo _id da resposta
-        System.out.println("ID do produto criado: " + produtoId);  // Exibe o ID gerado para referência
+                .path("_id");
+
+        System.out.println("ID do produto criado: " + produtoId);
     }
 
     @Test
-    @Order(2)  // Define que este teste será executado em segundo lugar
+    @Order(2)
     public void cadastrarProdutoSemToken() {
-        ProdutoDTO produtoDTO = new ProdutoDTO();
-        Faker faker = new Faker();
+        ProdutoDTO produtoDTO = criarProdutoDTO();
 
-        produtoDTO.setNome("Notebook Lenovo " + UUID.randomUUID());
-        produtoDTO.setPreco(faker.number().numberBetween(0, 3500));
-        produtoDTO.setDescricao(faker.book().title());
-        produtoDTO.setQuantidade(faker.number().numberBetween(1, 100));
-
-        // Cadastro do Produto sem Token
-        produtoId = given()
+        given()
                 .baseUri("https://serverest.dev")
                 .contentType(ContentType.JSON)
                 .body(produtoDTO)
@@ -67,8 +60,97 @@ public class ProdutoTest {
                 .post("produtos")
                 .then()
                 .log().all()
-                .statusCode(HttpStatus.SC_UNAUTHORIZED) // Espera um status 401 Unauthorized para login com falha
-                .extract()
-                .path("message", String.valueOf(is("Token de acesso ausente, inválido, expirado ou usuário do token não existe mais")));
+                .statusCode(HttpStatus.SC_UNAUTHORIZED)
+                .body("message", is("Token de acesso ausente, inválido, expirado ou usuário do token não existe mais"));
+    }
+
+    @Test
+    @Order(3)
+    public void buscarTodosProdutos() {
+        given()
+                .baseUri("https://serverest.dev")
+                .header("Authorization", token)
+                .when()
+                .get("produtos")
+                .then()
+                .log().all()
+                .statusCode(HttpStatus.SC_OK)
+                .body("produtos", not(empty()));
+    }
+
+    @Test
+    @Order(4)
+    public void buscarProdutoPorId() {
+        given()
+                .baseUri("https://serverest.dev")
+                .header("Authorization", token)
+                .when()
+                .get("produtos/{id}", produtoId)
+                .then()
+                .log().all()
+                .statusCode(HttpStatus.SC_OK)
+                .body("_id", is(produtoId));
+    }
+
+    @Test
+    @Order(5)
+    public void atualizarProduto() {
+        ProdutoDTO produtoAtualizado = criarProdutoDTO();
+
+        given()
+                .baseUri("https://serverest.dev")
+                .header("Authorization", token)
+                .contentType(ContentType.JSON)
+                .body(produtoAtualizado)
+                .when()
+                .put("produtos/{id}", produtoId)
+                .then()
+                .log().all()
+                .statusCode(HttpStatus.SC_OK)
+                .body("message", is("Registro alterado com sucesso"));
+    }
+
+    @Test
+    @Order(6)
+    public void apagarProduto() {
+        given()
+                .baseUri("https://serverest.dev")
+                .header("Authorization", token)
+                .when()
+                .delete("produtos/{id}", produtoId)
+                .then()
+                .log().all()
+                .statusCode(HttpStatus.SC_OK)
+                .body("message", is("Registro excluído com sucesso"));
+    }
+
+    private ProdutoDTO criarProdutoDTO() {
+        Faker faker = new Faker();
+        ProdutoDTO produtoDTO = new ProdutoDTO();
+
+        produtoDTO.setNome("Notebook Lenovo " + UUID.randomUUID());
+        produtoDTO.setPreco(faker.number().numberBetween(0, 3500));
+        produtoDTO.setDescricao(faker.book().title());
+        produtoDTO.setQuantidade(faker.number().numberBetween(1, 100));
+
+        return produtoDTO;
+    }
+
+    @AfterAll
+    public static void afterAll() {
+        // Deletando o usuário criado após todos os testes
+        usuarioId = AuthUtils.getUsuarioId();
+        if (usuarioId != null) {
+            Response response = given()
+                    .contentType(ContentType.JSON)
+                    .header("Authorization", token)
+                    .when()
+                    .delete("/usuarios/" + usuarioId);  // Endpoint para deletar o usuário com o ID específico
+
+            // Verificando se o usuário foi apagado com sucesso
+            response.then()
+                    .statusCode(HttpStatus.SC_OK);  // Espera o status 200 OK
+            System.out.println("Usuário com ID " + usuarioId + " deletado com sucesso.");
+        }
     }
 }
