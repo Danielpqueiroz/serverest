@@ -1,3 +1,5 @@
+package test;
+
 import com.github.javafaker.Faker;
 import dto.UsuarioDTO;
 import io.restassured.http.ContentType;
