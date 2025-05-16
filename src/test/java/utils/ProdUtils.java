@@ -18,7 +18,7 @@ public class ProdUtils {
         produtoDTO.setNome(faker.commerce().material() + " " + faker.commerce().productName());
         produtoDTO.setPreco(faker.number().numberBetween(1, 100));
         produtoDTO.setDescricao(faker.lorem().sentence());
-        produtoDTO.setQuantidade(faker.number().numberBetween(1, 100));
+        produtoDTO.setQuantidade(faker.number().numberBetween(3, 100));
         return produtoDTO;
     }
 
