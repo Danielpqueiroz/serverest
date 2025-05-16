@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import static io.restassured.RestAssured.baseURI;
 import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.*;
 
 public class LoginTest {
 
@@ -33,15 +34,19 @@ public class LoginTest {
         senhaCadastro = "123";  // Definindo uma senha fixa para o cadastro
         usuarioDTO.setPassword(senhaCadastro);
 
-        // Cadastro do usuário
+        // Cadastro do usuário com validação da resposta
         usuarioId = given()
                 .contentType(ContentType.JSON)
                 .body(usuarioDTO)
                 .when().post("usuarios")
                 .then()
                 .statusCode(HttpStatus.SC_CREATED)  // Espera um status 201 Created
+                .body("_id", notNullValue())
+                .body("message", equalTo("Cadastro realizado com sucesso"))
+                .log().all()
                 .extract()
                 .path("_id");  // Extrai o campo _id da resposta
+
         System.out.println("ID do usuário criado: " + usuarioId);  // Exibe o ID gerado para referência
     }
 
@@ -58,6 +63,8 @@ public class LoginTest {
                 .post("login")  // Endpoint de login
                 .then()
                 .statusCode(HttpStatus.SC_OK)  // Espera um status 200 OK para login bem-sucedido
+                .body("authorization", notNullValue()) // Verifica se o token de autorização está presente
+                .body("message", equalTo("Login realizado com sucesso"))
                 .log().all();
     }
 
@@ -74,6 +81,7 @@ public class LoginTest {
                 .post("login")  // Endpoint de login
                 .then()
                 .statusCode(HttpStatus.SC_UNAUTHORIZED)  // Espera um status 401 Unauthorized para login com falha
+                .body("message", equalTo("Email e/ou senha inválidos"))
                 .log().all();
     }
 
@@ -90,6 +98,7 @@ public class LoginTest {
                 .post("login")  // Endpoint de login
                 .then()
                 .statusCode(HttpStatus.SC_BAD_REQUEST)  // Espera um status 400 Bad Request
+                .body("password", equalTo("password é obrigatório"))
                 .log().all();
     }
 
@@ -102,7 +111,9 @@ public class LoginTest {
                 .when()
                 .delete("usuarios/" + usuarioId)  // Endpoint para deletar o usuário com o ID específico
                 .then()
-                .statusCode(HttpStatus.SC_OK);  // Espera um status 204 No Content para deletar com sucesso
+                .statusCode(HttpStatus.SC_OK)  // Espera um status 200 OK para deleção bem sucedida
+                .body("message", equalTo("Registro excluído com sucesso"))
+                .log().all();
         System.out.println("Usuário com ID " + usuarioId + " deletado com sucesso.");
     }
 }

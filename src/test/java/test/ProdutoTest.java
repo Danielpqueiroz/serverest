@@ -32,7 +32,6 @@ public class ProdutoTest {
         ProdutoDTO produtoDTO = criarProdutoDTO();
 
         produtoId = given()
-                .baseUri("https://serverest.dev")
                 .header("Authorization", token)
                 .contentType(ContentType.JSON)
                 .body(produtoDTO)
@@ -41,6 +40,8 @@ public class ProdutoTest {
                 .then()
                 .log().all()
                 .statusCode(HttpStatus.SC_CREATED)
+                .body("message", is("Cadastro realizado com sucesso"))
+                .body("_id", notNullValue())
                 .extract()
                 .path("_id");
 
@@ -51,28 +52,31 @@ public class ProdutoTest {
     @Order(2)
     public void buscarTodosProdutos() {
         given()
-                .baseUri("https://serverest.dev")
                 .header("Authorization", token)
                 .when()
                 .get("produtos")
                 .then()
                 .log().all()
                 .statusCode(HttpStatus.SC_OK)
-                .body("produtos", not(empty()));
+                .body("produtos", not(empty()))
+                .body("produtos._id", hasItem(produtoId));
     }
 
     @Test
     @Order(3)
     public void buscarProdutoPorId() {
         given()
-                .baseUri("https://serverest.dev")
                 .header("Authorization", token)
                 .when()
                 .get("produtos/{id}", produtoId)
                 .then()
                 .log().all()
                 .statusCode(HttpStatus.SC_OK)
-                .body("_id", is(produtoId));
+                .body("_id", is(produtoId))
+                .body("nome", notNullValue())
+                .body("preco", greaterThanOrEqualTo(0))
+                .body("descricao", notNullValue())
+                .body("quantidade", greaterThanOrEqualTo(0));
     }
 
     @Test
@@ -81,7 +85,6 @@ public class ProdutoTest {
         ProdutoDTO produtoAtualizado = criarProdutoDTO();
 
         given()
-                .baseUri("https://serverest.dev")
                 .header("Authorization", token)
                 .contentType(ContentType.JSON)
                 .body(produtoAtualizado)
@@ -97,7 +100,6 @@ public class ProdutoTest {
     @Order(5)
     public void apagarProduto() {
         given()
-                .baseUri("https://serverest.dev")
                 .header("Authorization", token)
                 .when()
                 .delete("produtos/{id}", produtoId)
@@ -112,9 +114,9 @@ public class ProdutoTest {
         ProdutoDTO produtoDTO = new ProdutoDTO();
 
         produtoDTO.setNome("Notebook Lenovo " + UUID.randomUUID());
-        produtoDTO.setPreco(faker.number().numberBetween(0, 3500));
+        produtoDTO.setPreco(faker.number().numberBetween(1, 3500)); // preco > 0
         produtoDTO.setDescricao(faker.book().title());
-        produtoDTO.setQuantidade(faker.number().numberBetween(1, 100));
+        produtoDTO.setQuantidade(faker.number().numberBetween(1, 100)); // quantidade >= 1
 
         return produtoDTO;
     }
@@ -125,7 +127,6 @@ public class ProdutoTest {
         ProdutoDTO produtoDTO = criarProdutoDTO();
 
         given()
-                .baseUri("https://serverest.dev")
                 .contentType(ContentType.JSON)
                 .body(produtoDTO)
                 .when()
@@ -145,11 +146,10 @@ public class ProdutoTest {
                     .contentType(ContentType.JSON)
                     .header("Authorization", token)
                     .when()
-                    .delete("/usuarios/" + usuarioId);  // Endpoint para deletar o usuário com o ID específico
+                    .delete("/usuarios/" + usuarioId);
 
-            // Verificando se o usuário foi apagado com sucesso
             response.then()
-                    .statusCode(HttpStatus.SC_OK);  // Espera o status 200 OK
+                    .statusCode(HttpStatus.SC_OK);
             System.out.println("Usuário com ID " + usuarioId + " deletado com sucesso.");
         }
     }

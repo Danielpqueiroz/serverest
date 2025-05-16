@@ -6,7 +6,7 @@ import org.junit.jupiter.api.*;
 
 import static io.restassured.RestAssured.baseURI;
 import static io.restassured.RestAssured.given;
-import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.*;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class UsuarioTest {
@@ -35,8 +35,12 @@ public class UsuarioTest {
                 .post("usuarios")
                 .then()
                 .statusCode(HttpStatus.SC_CREATED)
+                .body("_id", notNullValue())
+                .body("message", equalTo("Cadastro realizado com sucesso"))
+                .log().all()
                 .extract()
                 .path("_id");
+
 
         System.out.println("ID do usuário criado: " + usuarioId);
     }
@@ -54,10 +58,9 @@ public class UsuarioTest {
                 .post("usuarios")
                 .then()
                 .statusCode(HttpStatus.SC_BAD_REQUEST)
-                .body("message", containsString("Este email já está sendo usado")); // Ajuste a mensagem conforme a API
+                .body("message", containsString("Este email já está sendo usado"))
+                .log().all();
     }
-
-    // ... os demais testes permanecem iguais ...
 
     @Test
     @Order(3)
@@ -68,6 +71,13 @@ public class UsuarioTest {
                 .get("usuarios")
                 .then()
                 .statusCode(HttpStatus.SC_OK)
+                .body("quantidade", greaterThan(0))
+                .body("usuarios", not(empty()))
+                .body("usuarios[0].nome", not(emptyString()))
+                .body("usuarios[0].email", not(emptyString()))
+                .body("usuarios[0].password", not(emptyString()))
+                .body("usuarios[0].administrador", anyOf(equalTo("true"), equalTo("false")))
+                .body("usuarios[0]._id", notNullValue())
                 .log().all();
     }
 
@@ -80,6 +90,11 @@ public class UsuarioTest {
                 .get("usuarios/{id}", usuarioId)
                 .then()
                 .statusCode(HttpStatus.SC_OK)
+                .body("_id", equalTo(usuarioId))
+                .body("nome", not(emptyString()))
+                .body("email", not(emptyString()))
+                .body("password", not(emptyString()))
+                .body("administrador", anyOf(equalTo("true"), equalTo("false")))
                 .log().all();
     }
 
@@ -95,6 +110,7 @@ public class UsuarioTest {
                 .put("usuarios/{id}", usuarioId)
                 .then()
                 .statusCode(HttpStatus.SC_OK)
+                .body("message", equalTo("Registro alterado com sucesso"))
                 .log().all();
     }
 
@@ -107,6 +123,7 @@ public class UsuarioTest {
                 .delete("usuarios/{id}", usuarioId)
                 .then()
                 .statusCode(HttpStatus.SC_OK)
+                .body("message", equalTo("Registro excluído com sucesso"))
                 .log().all();
     }
 
